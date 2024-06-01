@@ -1,0 +1,220 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execute Python Script</title>
+    <style>
+        html {
+          box-sizing: border-box;
+        }
+        *, *:before, *:after {
+          box-sizing: inherit;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          color: white;
+          overflow-x:hidden;
+        }
+    </style>
+</head>
+<body style="background-color: #202020; width: 100%; padding: 0 20px 0 20px; margin: 0 auto;">
+    <h1>Enter Python Script</h1>
+    <div>
+        <form id="scriptForm">
+            <textarea id="script" style="
+                width: 100%;
+                padding:10px;
+                height: 500px;
+                border-radius: 5px;
+                background-color: #40404060;
+                border-style: solid;
+                border-color: #FFFFFF60;
+                border-width: 2px;
+                color: white;
+            ">
+            </textarea>
+            <button type="button" onclick="submitScript()">Submit</button>
+        </form>
+        <p>Select available Python Imports</p>
+        <div id="imports">
+            <div>
+                <input type="checkbox" id="os" value="os"><label for="os">os</label>
+            </div>
+            <div>
+                <input type="checkbox" id="numpy" value="numpy"><label for="numpy">numpy</label>
+            </div>
+            <div>
+                <input type="checkbox" id="pandas" value="pandas"><label for="pandas">pandas</label>
+            </div>
+            <div>
+                <input type="checkbox" id="json" value="json"><label for="json">json</label>
+            </div>
+        </div>
+        <p>Add additional imports (Make sure to add these to requirements-nsjail.txt as well):</p>
+        <input type="text" id="additionalImport" placeholder="Enter additional import">
+        <button type="button" onclick="addImport()">Add Import</button>
+        <p>Fastcheck</p>
+        <input type="checkbox" id="fastcheck" value="fastcheck-main"><label for="fastcheck-main">Fastcheck main exists?</label>
+
+        <p>Select Python functions to disable</p>
+        <div id="disallowed">
+            <div>
+                <input type="checkbox" id="eval" value="eval"><label for="eval">eval</label>
+            </div>
+            <div>
+                <input type="checkbox" id="exec" value="exec"><label for="exec">exec</label>
+            </div>
+        </div>
+        <p>Add additional functions:</p>
+        <input type="text" id="additionalFunction" placeholder="Enter additional function">
+        <button type="button" onclick="addFunction()">Add Function</button>
+    </div>
+    <h2>Output Log:</h2>
+    <pre id="output"></pre>
+
+    <script>
+        // Set default imports to checked true
+        document.querySelectorAll('#imports input[type="checkbox"]').forEach(checkbox => checkbox.checked = true);
+
+        // Set default functions to checked true
+        document.querySelectorAll('#disallowed input[type="checkbox"]').forEach(checkbox => checkbox.checked = true);
+
+        // Set default value of textarea to a sample script.
+        document.getElementById('script').value = `
+
+# Disallow unallowed imports outside main function even if provided by the system
+# import scipy
+
+# Block defined functions outside main function
+# eval("help")
+
+def main():
+    # Disallow unallowed imports within main function even if provided by the system
+    # import scipy
+    
+    x = {
+        "name": "Silyas",
+        "age": 25,
+        "city": "St. Gallen"
+    }
+    
+    # Ignore print statements
+    print("Hello, World")
+
+    # Block defined functions within main function
+    # eval("help")
+    
+    return json.dumps(x)
+`
+
+        // Function to add a function to the list of disallowed functions.
+        function addFunction() {
+            const additionalFunction = document.getElementById('additionalFunction').value;
+            const disallowed = document.getElementById('disallowed');
+            const div = document.createElement('div');
+            const input = document.createElement('input');
+            const label = document.createElement('label');
+            input.type = 'checkbox';
+            input.value = additionalFunction;
+            input.checked = true;
+            input.id = additionalFunction;
+            label.htmlFor = additionalFunction;
+            label.innerText = additionalFunction;
+            div.appendChild(input);
+            div.appendChild(label);
+            disallowed.appendChild(div);
+        }
+
+        // Function to add an import to the list of imports.
+        function addImport() {
+            const additionalImport = document.getElementById('additionalImport').value;
+            const imports = document.getElementById('imports');
+            const div = document.createElement('div');
+            const input = document.createElement('input');
+            const label = document.createElement('label');
+            input.type = 'checkbox';
+            input.value = additionalImport;
+            input.checked = true;
+            input.id = additionalImport;
+            label.htmlFor = additionalImport;
+            label.innerText = additionalImport;
+            div.appendChild(input);
+            div.appendChild(label);
+            imports.appendChild(div);
+        }
+
+        async function submitScript() {
+            const script = document.getElementById('script').value;
+            // Get the selected Imports by looping over the checkboxes and checking if they are checked.
+            const imports = Array.from(document.querySelectorAll('#imports input[type="checkbox"]'))
+                .filter(checkbox => checkbox.checked)
+                .map(checkbox => checkbox.value);
+
+            const disallowed = Array.from(document.querySelectorAll('#disallowed input[type="checkbox"]'))
+                .filter(checkbox => checkbox.checked)
+                .map(checkbox => checkbox.value);
+
+            const queryBuilder = []
+            // If there are selected imports, add them to the queryBuilderString.
+            if (imports.length > 0) {
+                queryBuilder.push(`imports=${imports.join(',')}`);
+            } else {
+                queryBuilder.push('imports=');
+            }
+
+            if (disallowed.length > 0) {
+                queryBuilder.push(`disallowed=${disallowed.join(',')}`);
+            } else {
+                queryBuilder.push('disallowed=');
+            }
+
+            // Check if the fastcheck checkbox is checked.
+            if (document.getElementById('fastcheck').checked) {
+                queryBuilder.push('fastcheck=true');
+            }
+
+            let jpath = "/execute";
+            // Send the script and imports to the server.
+            if (queryBuilder.length > 0) {
+                jpath = `/execute?${queryBuilder.join('&')}`;
+            }
+            const response = await fetch(`${jpath}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ script }, null, 2)
+            });
+
+            const responseType = response.status === 200 ? "success" : "error";
+            const borderColor = responseType === "success" ? '#10f577' : '#FF4C4C'
+
+            const result = await response.json();
+            // Create a result element and append to output. Add the date and time to the result.
+            // Stylize with CSS Modern UI.
+            const resultElement = document.createElement('div');
+            resultElement.style = `
+                white-space: pre-wrap;
+                border-style: solid;
+                border-color: ${borderColor};
+                border-width: 2px;
+                background-color: #40404060;
+                padding: 10px;
+                margin: 10px 0 10px 0;
+                border-radius: 5px;
+                color: white;
+            `;
+
+            resultElement.innerHTML = `
+                <h3>${new Date().toLocaleString()}</h3>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+            resultElement.innerText = JSON.stringify(result, null, 2);
+            // Append the result element to the output element. But at the top of the output.
+            document.getElementById('output').prepend(resultElement);
+        }
+    </script>
+</body>
+</html>
