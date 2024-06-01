@@ -43,6 +43,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY requirements-nsjail.txt ./
 RUN pip install --no-cache-dir -r requirements-nsjail.txt --target=/usr/lib/python3.11/site-packages/
 
+# Create sandbox directory
+RUN mkdir -p /sandbox
+
 # Copy the application code
 COPY . .
 

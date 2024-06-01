@@ -149,7 +149,7 @@ def create_execution_file(query, disallowed, script):
     disallowed_list = handle_lists(DEFAULT_DISALLOWED_FUNCTIONS, disallowed)
 
     # Create a unique temporary script file // uuid for future-proofing
-    script_filename = f"/tmp/{uuid.uuid4()}.py"
+    script_filename = f"/sandbox/{uuid.uuid4()}.py"
     with open(script_filename, "w") as file:
         try:
             file.write(create_execution_script(script, disallowed_list, import_list))
