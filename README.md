@@ -19,14 +19,10 @@ docker run --priveleged -p 8080:8080 take-home
 
 ### Open Browser
 Don't forget to add the `https` prefix.
-```bash
 [https://127.0.0.1:8080/](https://127.0.0.1:8080/)
-```
 
 
 ## Other
 
 ### Test unallowed imports
-```bash
-# Uncomment `scipy` in `requirements-nsjail.txt` and rebuild the image
-```
+Uncomment `scipy` in `requirements-nsjail.txt` and rebuild the image
